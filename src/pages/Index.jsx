@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cat, Heart, Info, Paw, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Cat, Heart, Info, Paw, RefreshCw, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Progress } from "@/components/ui/progress";
 
 const NavItem = ({ children, href }) => (
   <motion.a
     href={href}
-    className="text-white hover:text-gray-300 transition-colors"
+    className="text-white hover:text-gray-300 transition-colors relative group"
     whileHover={{ scale: 1.1 }}
     whileTap={{ scale: 0.95 }}
   >
     {children}
+    <motion.span
+      className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full"
+      initial={{ width: "0%" }}
+      whileHover={{ width: "100%" }}
+    />
   </motion.a>
 );
 
@@ -37,8 +43,10 @@ const Index = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [currentBreedIndex, setCurrentBreedIndex] = useState(0);
   const [catFacts, setCatFacts] = useState([]);
+  const [isLikeAnimating, setIsLikeAnimating] = useState(false);
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 250]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   const { data: catOfTheDay } = useQuery({
     queryKey: ['catOfTheDay'],
@@ -78,7 +86,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <nav className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 fixed w-full z-10">
+      <motion.nav
+        className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 fixed w-full z-10"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -100,7 +113,7 @@ const Index = () => {
             <NavItem href="#facts">Facts</NavItem>
           </motion.div>
         </div>
-      </nav>
+      </motion.nav>
 
       <div className="flex-grow pt-16">
         <motion.div
@@ -123,10 +136,25 @@ const Index = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
+            style={{ opacity }}
             className="text-center text-white bg-black bg-opacity-50 p-8 rounded-lg relative z-10"
           >
-            <h1 className="text-6xl font-bold mb-4">All About Cats</h1>
-            <p className="text-2xl">Discover the fascinating world of our feline friends</p>
+            <motion.h1
+              className="text-6xl font-bold mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+            >
+              All About Cats
+            </motion.h1>
+            <motion.p
+              className="text-2xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
+              Discover the fascinating world of our feline friends
+            </motion.p>
           </motion.div>
         </motion.div>
 
@@ -160,11 +188,18 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  <img
-                    src={catBreeds[currentBreedIndex].image}
-                    alt={catBreeds[currentBreedIndex].name}
-                    className="w-full h-48 object-cover rounded-md"
-                  />
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={currentBreedIndex}
+                      src={catBreeds[currentBreedIndex].image}
+                      alt={catBreeds[currentBreedIndex].name}
+                      className="w-full h-48 object-cover rounded-md"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </AnimatePresence>
                   <div className="absolute inset-0 flex items-center justify-between">
                     <Button onClick={prevBreed} variant="ghost" className="text-white bg-black bg-opacity-50 hover:bg-opacity-75">
                       <ChevronLeft className="h-6 w-6" />
@@ -174,8 +209,24 @@ const Index = () => {
                     </Button>
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold mt-4">{catBreeds[currentBreedIndex].name}</h3>
-                <p className="text-sm text-gray-600">{catBreeds[currentBreedIndex].description}</p>
+                <motion.h3
+                  key={`name-${currentBreedIndex}`}
+                  className="text-lg font-semibold mt-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {catBreeds[currentBreedIndex].name}
+                </motion.h3>
+                <motion.p
+                  key={`desc-${currentBreedIndex}`}
+                  className="text-sm text-gray-600"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  {catBreeds[currentBreedIndex].description}
+                </motion.p>
               </CardContent>
             </Card>
 
@@ -224,11 +275,44 @@ const Index = () => {
             className="mt-8 text-center"
           >
             <Button 
-              onClick={() => setLikeCount(prev => prev + 1)}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={() => {
+                setLikeCount(prev => prev + 1);
+                setIsLikeAnimating(true);
+              }}
+              className="bg-red-500 hover:bg-red-600 text-white relative overflow-hidden"
+              disabled={isLikeAnimating}
             >
               <Heart className="mr-2" /> Like Cats ({likeCount})
+              <AnimatePresence>
+                {isLikeAnimating && (
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 2 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    onAnimationComplete={() => setIsLikeAnimating(false)}
+                  >
+                    <Heart className="text-white" fill="white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Button>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-8"
+          >
+            <h3 className="text-2xl font-semibold mb-4 text-center">Cat Appreciation Level</h3>
+            <Progress value={likeCount} max={100} className="w-full h-4" />
+            <p className="text-center mt-2">
+              {likeCount < 20 ? "Novice Cat Admirer" :
+               likeCount < 50 ? "Cat Enthusiast" :
+               likeCount < 80 ? "Feline Aficionado" :
+               "Ultimate Cat Lover"}
+            </p>
           </motion.div>
         </div>
       </div>
