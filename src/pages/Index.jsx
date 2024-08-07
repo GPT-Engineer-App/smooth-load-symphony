@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cat, Heart, Info, Paw, RefreshCw } from "lucide-react";
+import { Cat, Heart, Info, Paw, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 const NavItem = ({ children, href }) => (
   <motion.a
@@ -17,39 +18,63 @@ const NavItem = ({ children, href }) => (
   </motion.a>
 );
 
-const CatFact = ({ trigger, children }) => (
-  <AccordionItem value={trigger}>
-    <AccordionTrigger>{trigger}</AccordionTrigger>
-    <AccordionContent>{children}</AccordionContent>
+const CatFact = ({ fact, index }) => (
+  <AccordionItem value={`item-${index}`}>
+    <AccordionTrigger>Cat Fact #{index + 1}</AccordionTrigger>
+    <AccordionContent>{fact}</AccordionContent>
   </AccordionItem>
 );
 
+const catBreeds = [
+  { name: "Siamese", image: "https://cdn2.thecatapi.com/images/Ddq6zJm0_.jpg", description: "Vocal and social cats known for their distinctive color points." },
+  { name: "Persian", image: "https://cdn2.thecatapi.com/images/ozEvzdVM-.jpg", description: "Long-haired cats with a sweet, gentle nature." },
+  { name: "Maine Coon", image: "https://cdn2.thecatapi.com/images/OOD3VXAQn.jpg", description: "Large, friendly cats with tufted ears and long, fluffy tails." },
+  { name: "Bengal", image: "https://cdn2.thecatapi.com/images/O3btzLlsO.png", description: "Active, playful cats with a wild appearance." },
+  { name: "Scottish Fold", image: "https://cdn2.thecatapi.com/images/o9t0LDcsa.jpg", description: "Known for their distinctive folded ears and round faces." },
+];
+
 const Index = () => {
   const [likeCount, setLikeCount] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
-  const [selectedBreed, setSelectedBreed] = useState("");
-  const [catFact, setCatFact] = useState("");
+  const [currentBreedIndex, setCurrentBreedIndex] = useState(0);
+  const [catFacts, setCatFacts] = useState([]);
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 500], [0, 250]);
 
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const generateCatFact = async () => {
-    try {
-      const response = await fetch("https://catfact.ninja/fact");
+  const { data: catOfTheDay } = useQuery({
+    queryKey: ['catOfTheDay'],
+    queryFn: async () => {
+      const response = await fetch('https://api.thecatapi.com/v1/images/search');
       const data = await response.json();
-      setCatFact(data.fact);
+      return data[0];
+    },
+  });
+
+  const fetchCatFacts = async () => {
+    try {
+      const facts = [];
+      for (let i = 0; i < 5; i++) {
+        const response = await fetch("https://catfact.ninja/fact");
+        const data = await response.json();
+        facts.push(data.fact);
+      }
+      setCatFacts(facts);
     } catch (error) {
-      console.error("Error fetching cat fact:", error);
-      setCatFact("Oops! Couldn't fetch a cat fact right now. Try again later!");
+      console.error("Error fetching cat facts:", error);
+      setCatFacts(["Oops! Couldn't fetch cat facts right now. Try again later!"]);
     }
   };
 
   useEffect(() => {
-    generateCatFact();
+    fetchCatFacts();
   }, []);
+
+  const nextBreed = () => {
+    setCurrentBreedIndex((prevIndex) => (prevIndex + 1) % catBreeds.length);
+  };
+
+  const prevBreed = () => {
+    setCurrentBreedIndex((prevIndex) => (prevIndex - 1 + catBreeds.length) % catBreeds.length);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -91,7 +116,7 @@ const Index = () => {
               backgroundImage: "url('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80')",
               backgroundPosition: "center",
               backgroundSize: "cover",
-              y: scrollY * 0.5,
+              y,
             }}
           />
           <motion.div
@@ -130,44 +155,64 @@ const Index = () => {
 
             <Card id="breeds" className="hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className="flex items-center"><Paw className="mr-2" /> Cat Breed Selector</CardTitle>
-                <CardDescription>Choose a cat breed to learn more</CardDescription>
+                <CardTitle className="flex items-center"><Paw className="mr-2" /> Cat Breed Carousel</CardTitle>
+                <CardDescription>Explore different cat breeds</CardDescription>
               </CardHeader>
               <CardContent>
-                <Select onValueChange={setSelectedBreed} value={selectedBreed}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a breed" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="siamese">Siamese</SelectItem>
-                    <SelectItem value="persian">Persian</SelectItem>
-                    <SelectItem value="maine-coon">Maine Coon</SelectItem>
-                    <SelectItem value="bengal">Bengal</SelectItem>
-                    <SelectItem value="scottish-fold">Scottish Fold</SelectItem>
-                  </SelectContent>
-                </Select>
-                {selectedBreed && (
-                  <div className="mt-4">
-                    <img
-                      src={`https://cdn2.thecatapi.com/images/${selectedBreed === 'siamese' ? 'Ddq6zJm0_.jpg' : selectedBreed === 'persian' ? 'ozEvzdVM-.jpg' : selectedBreed === 'maine-coon' ? 'OOD3VXAQn.jpg' : selectedBreed === 'bengal' ? 'O3btzLlsO.png' : 'o9t0LDcsa.jpg'}`}
-                      alt={selectedBreed}
-                      className="w-full h-48 object-cover rounded-md"
-                    />
+                <div className="relative">
+                  <img
+                    src={catBreeds[currentBreedIndex].image}
+                    alt={catBreeds[currentBreedIndex].name}
+                    className="w-full h-48 object-cover rounded-md"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-between">
+                    <Button onClick={prevBreed} variant="ghost" className="text-white bg-black bg-opacity-50 hover:bg-opacity-75">
+                      <ChevronLeft className="h-6 w-6" />
+                    </Button>
+                    <Button onClick={nextBreed} variant="ghost" className="text-white bg-black bg-opacity-50 hover:bg-opacity-75">
+                      <ChevronRight className="h-6 w-6" />
+                    </Button>
                   </div>
-                )}
+                </div>
+                <h3 className="text-lg font-semibold mt-4">{catBreeds[currentBreedIndex].name}</h3>
+                <p className="text-sm text-gray-600">{catBreeds[currentBreedIndex].description}</p>
               </CardContent>
             </Card>
 
             <Card id="facts" className="hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className="flex items-center"><Cat className="mr-2" /> Cat Fact Generator</CardTitle>
+                <CardTitle className="flex items-center"><Cat className="mr-2" /> Cat Facts</CardTitle>
                 <CardDescription>Learn interesting facts about cats</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="mb-4">{catFact}</p>
-                <Button onClick={generateCatFact} className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" /> Generate New Fact
+                <Accordion type="single" collapsible className="w-full">
+                  {catFacts.map((fact, index) => (
+                    <CatFact key={index} fact={fact} index={index} />
+                  ))}
+                </Accordion>
+                <Button onClick={fetchCatFacts} className="w-full mt-4">
+                  <RefreshCw className="mr-2 h-4 w-4" /> Generate New Facts
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center"><Cat className="mr-2" /> Cat of the Day</CardTitle>
+                <CardDescription>Meet today's featured feline</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {catOfTheDay ? (
+                  <img
+                    src={catOfTheDay.url}
+                    alt="Cat of the Day"
+                    className="w-full h-48 object-cover rounded-md"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-200 rounded-md flex items-center justify-center">
+                    Loading...
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
